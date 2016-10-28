@@ -2,10 +2,7 @@
 
 #include <Adafruit_NeoPixel.h>
 
-const uint8_t   OUTPUT_PIN   = 0;
-const uint8_t   NUM_PIXELS   = 16;
-
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, OUTPUT_PIN);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(16, 0);
 
 uint8_t brightness = 255;
 uint32_t hue = 0, saturation = 255;
@@ -24,7 +21,7 @@ uint32_t ComputeColor(uint32_t h, uint32_t s, uint32_t v)
 
   if (saturation == 0)
   {
-    return pixels.Color(v, v, v);
+    return strip.Color(v, v, v);
   }
 
   region = h / 43;
@@ -37,39 +34,39 @@ uint32_t ComputeColor(uint32_t h, uint32_t s, uint32_t v)
   switch (region)
   {
     case 0:
-        return pixels.Color(v, t, p);
+        return strip.Color(v, t, p);
     case 1:
-        return pixels.Color(q, v, p);
+        return strip.Color(q, v, p);
     case 2:
-        return pixels.Color(p, v, t);    
+        return strip.Color(p, v, t);    
     case 3:
-        return pixels.Color(p, q, v);    
+        return strip.Color(p, q, v);    
     case 4:
-        return pixels.Color(t, p, v);    
+        return strip.Color(t, p, v);    
     default:
-        return pixels.Color(v, p, q);
+        return strip.Color(v, p, q);
   }
 }
 
 void setup() 
 {
-  pixels.begin();
-  pixels.setBrightness(brightness);
-  pixels.show();
+  strip.begin();
+  strip.setBrightness(brightness);
+  strip.show();
 }
 
 void loop() 
 { 
   uint8_t curr_pixel = pixel_shift;
-  for (uint8_t i = 0; i < NUM_PIXELS; i++) {
-    pixels.setPixelColor(curr_pixel, ComputeColor(hue, saturation, (i * 16) + 8));
-    if (curr_pixel++ > NUM_PIXELS) {
+  for (uint8_t i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(curr_pixel, ComputeColor(hue, saturation, i));
+    if (curr_pixel++ > strip.numPixels()) {
       curr_pixel = 0;
     }
   }
-  pixels.show();
+  strip.show();
   
-  if (pixel_shift++ > NUM_PIXELS) {
+  if (pixel_shift++ > strip.numPixels()) {
     pixel_shift = 0;
   }
   
