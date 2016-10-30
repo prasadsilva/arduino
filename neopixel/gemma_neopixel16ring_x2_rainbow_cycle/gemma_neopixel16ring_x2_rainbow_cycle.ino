@@ -1,18 +1,72 @@
 // Rainbow color cycle for Adafruit GEMMA + 2 x 16 LED NeoPixel ring (with brightness toggle)
 
+// The two rings side by side will display an infinity symbol tracer effect
+
 #include <Adafruit_NeoPixel.h>
 
 const uint8_t STRIP_PIN = 0;
 const uint8_t TOGGLE_PIN = 1;
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(32, 0);
+const uint8_t TOTAL_PIXELS = 32;
+const uint8_t TRAIL_PIXEL_COUNT = 10;  // Make sure this is less than TOTAL_PIXELS
 
-uint8_t brightness = 255;
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(TOTAL_PIXELS, 0);
+
+uint16_t brightness = 255;
 uint32_t hue = 0, saturation = 255;
 
-const uint8_t CYCLE_DELAY = 50;
+const uint16_t CYCLE_DELAY = 25;
 
-uint8_t pixel_shift = 0;
+const uint32_t VFACTOR = 255 / (TOTAL_PIXELS - TRAIL_PIXEL_COUNT);
+
+// This lookup allows compensating for physical orientation of the rings
+// due to installation differences
+uint16_t pixel_order_idx = 0;
+const uint16_t PIXEL_ORDER[32] = {
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0,
+  26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 31, 30, 29, 28, 27,
+};
+
+void setup() 
+{
+  pinMode(TOGGLE_PIN, INPUT);
+  digitalWrite(TOGGLE_PIN, HIGH);
+  
+  strip.begin();
+  strip.show();
+}
+
+void loop() 
+{ 
+  // Switch between the two brightness levels
+  uint8_t buttonState = digitalRead(TOGGLE_PIN);
+  if (buttonState == LOW) {
+   brightness = 255;
+  } else {
+    brightness = 64;
+  }
+  strip.setBrightness(brightness);
+ 
+  uint16_t curr_pixel = pixel_order_idx;
+  for (uint16_t i = 0; i < TOTAL_PIXELS; i++) {
+    uint32_t value = (i < TRAIL_PIXEL_COUNT ? 0 : (i - TRAIL_PIXEL_COUNT) * VFACTOR);
+    strip.setPixelColor(PIXEL_ORDER[curr_pixel], ComputeColor(hue, saturation, value));
+    if (curr_pixel++ >= TOTAL_PIXELS) {
+      curr_pixel = 0;
+    }
+  }
+  strip.show();
+  
+  if (pixel_order_idx++ >= TOTAL_PIXELS) {
+    pixel_order_idx = 0;
+  }
+  
+  if (hue++ > 255) {
+    hue = 0;
+  }
+  
+  delay(CYCLE_DELAY);
+}
 
 // Modified HSV->RGB function
 // Original: http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
@@ -49,44 +103,4 @@ uint32_t ComputeColor(uint32_t h, uint32_t s, uint32_t v)
     default:
         return strip.Color(v, p, q);
   }
-}
-
-void setup() 
-{
-  pinMode(TOGGLE_PIN, INPUT);
-  digitalWrite(TOGGLE_PIN, HIGH);
-  
-  strip.begin();
-  strip.show();
-}
-
-void loop() 
-{ 
-  uint8_t buttonState = digitalRead(TOGGLE_PIN);
-  if (buttonState == LOW) {
-   brightness = 255;
-  } else {
-    brightness = 64;
-  }
-  strip.setBrightness(brightness);
-  
-  uint32_t vfactor = 255 / strip.numPixels();
-  uint8_t curr_pixel = pixel_shift;
-  for (uint8_t i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(curr_pixel, ComputeColor(hue, saturation, (i * vfactor)));
-    if (curr_pixel++ > strip.numPixels()) {
-      curr_pixel = 0;
-    }
-  }
-  strip.show();
-  
-  if (pixel_shift++ > strip.numPixels()) {
-    pixel_shift = 0;
-  }
-  
-  if (hue++ > 256) {
-    hue = 0;
-  }
-  
-  delay(CYCLE_DELAY);
 }
